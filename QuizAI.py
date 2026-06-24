@@ -4,7 +4,7 @@ import json
 import re
 from PyPDF2 import PdfReader
 
-genai.configure(api_key="AQ.Ab8RN6LmdjYn1HvFNtcfN9Wfgco1QQ5ta6Y8znIZabphdUJEqQ")
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
 model = genai.GenerativeModel("gemini-2.5-flash")
 
