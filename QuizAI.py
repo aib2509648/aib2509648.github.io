@@ -110,11 +110,8 @@ if uploaded_file:
     if st.button("Tạo câu hỏi"):
         prompt = f"""
         Dựa vào nội dung sau:
-
         {text}
-
         Hãy tạo {question_count} câu hỏi trắc nghiệm.
-
         Chỉ trả về JSON hợp lệ, không viết thêm chữ bên ngoài.
         JSON phải là một mảng, mỗi phần tử có dạng:
         {{
@@ -134,8 +131,15 @@ if uploaded_file:
             response = model.generate_content(prompt)
 
         st.session_state.quiz_questions = parse_quiz(response.text)
+        st.session_state.quiz_submitted = False
+
+    def reset_score():
+        st.session_state.quiz_submitted = False
 
     if "quiz_questions" in st.session_state and st.session_state.quiz_questions:
+        if "quiz_submitted" not in st.session_state:
+            st.session_state.quiz_submitted = False
+
         for index, item in enumerate(st.session_state.quiz_questions, start=1):
             st.subheader(f"Câu {index}: {item['question']}")
 
@@ -149,9 +153,10 @@ if uploaded_file:
                 choices,
                 index=None,
                 key=f"question_{index}",
+                on_change=reset_score,
             )
 
-            if selected:
+            if st.session_state.quiz_submitted and selected:
                 selected_key = selected.split(".", 1)[0]
 
                 if selected_key == item["answer"]:
@@ -166,5 +171,37 @@ if uploaded_file:
                     st.info(item["explanation"])
 
             st.divider()
+
+        if st.button("Chấm Điểm"):
+            st.session_state.quiz_submitted = True
+            st.rerun()
+
+        if st.session_state.quiz_submitted:
+            total_questions = len(st.session_state.quiz_questions)
+            correct_count = 0
+            unanswered_count = 0
+
+            for index, item in enumerate(st.session_state.quiz_questions, start=1):
+                selected = st.session_state.get(f"question_{index}")
+
+                if not selected:
+                    unanswered_count += 1
+                    continue
+
+                selected_key = selected.split(".", 1)[0]
+
+                if selected_key == item["answer"]:
+                    correct_count += 1
+
+            wrong_count = total_questions - correct_count - unanswered_count
+            score = correct_count / total_questions * 10
+
+            st.subheader("Kết Quả")
+            st.metric("Điểm", f"{score:.1f}/10")
+            st.write(
+                f"Đúng: {correct_count}/{total_questions} | "
+                f"Sai: {wrong_count} | "
+                f"Không Trả Lời: {unanswered_count}"
+            )
     elif "quiz_questions" in st.session_state:
         st.warning("Chưa tách được quiz tự động. Bấm Tạo câu hỏi lại giúp mình nhé.")
